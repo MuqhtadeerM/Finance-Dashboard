@@ -1,12 +1,76 @@
-import { Grid, Typography, Box, Card, CardContent, Chip } from "@mui/material";
+import {
+  Box,
+  Grid,
+  Typography,
+  Card,
+  CardContent,
+  Divider,
+  Chip,
+} from "@mui/material";
 import { Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import SummaryCard from "../components/ui/SummaryCard";
-import BalanceTrend from "../components/charts/BalanceTrend";
-import SpendingBreakdown from "../components/charts/SpendingBreakdown";
 import { formatCurrency, formatDate } from "../utils/helpers";
 import { CATEGORY_COLORS } from "../data/mockData";
 
+// ── Recent transaction row ──
+function RecentItem({ tx }) {
+  const color = CATEGORY_COLORS[tx.category] || "#94a3b8";
+
+  return (
+    <Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1.25 }}>
+        {/* Colored dot with arrow */}
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 2,
+            backgroundColor: color + "22",
+            color: color,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "0.9rem",
+            flexShrink: 0,
+          }}
+        >
+          {tx.type === "income" ? "↑" : "↓"}
+        </Box>
+
+        {/* Description + date */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 500, color: "text.primary", noWrap: true }}
+          >
+            {tx.description}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {formatDate(tx.date)} · {tx.category}
+          </Typography>
+        </Box>
+
+        {/* Amount */}
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 700,
+            color: tx.type === "income" ? "success.main" : "error.main",
+            flexShrink: 0,
+          }}
+        >
+          {tx.type === "income" ? "+" : "-"}
+          {formatCurrency(tx.amount)}
+        </Typography>
+      </Box>
+      <Divider />
+    </Box>
+  );
+}
+
+// ── Main Overview page ──
 export default function Overview() {
   const { summary, transactions } = useApp();
 
@@ -18,52 +82,48 @@ export default function Overview() {
   return (
     <Box>
       {/* Page heading */}
-      <Typography variant="h5" fontWeight={800} mb={0.5}>
-        Good morning 👋
+      <Typography
+        variant="h4"
+        sx={{ mb: 0.5, fontSize: { xs: "1.5rem", sm: "1.8rem", md: "2rem" } }}
+      >
+        Overview
       </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Here's your financial summary
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Your financial summary at a glance
       </Typography>
 
-      {/* ── Summary Cards ── */}
-      <Grid container spacing={2} mb={3}>
-        <Grid item xs={12} md={4}>
+      {/* ── Summary cards ── */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
           <SummaryCard
             type="balance"
+            title="Total Balance"
             amount={formatCurrency(summary.balance)}
-            subtitle="Total balance this period"
+            subtitle="Income minus all expenses"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <SummaryCard
             type="income"
+            title="Total Income"
             amount={formatCurrency(summary.income)}
-            subtitle="All salary + freelance"
+            subtitle="Salary + freelance combined"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <SummaryCard
             type="expense"
+            title="Total Expenses"
             amount={formatCurrency(summary.expenses)}
             subtitle="All outgoing payments"
           />
         </Grid>
       </Grid>
 
-      {/* ── Charts ── */}
-      <Grid container spacing={2} mb={3}>
-        <Grid item xs={12} md={7}>
-          <BalanceTrend />
-        </Grid>
-        <Grid item xs={12} md={5}>
-          <SpendingBreakdown />
-        </Grid>
-      </Grid>
-
-      {/* ── Recent Transactions ── */}
+      {/* ── Recent transactions ── */}
       <Card>
-        <CardContent sx={{ p: 2.5 }}>
-          {/* Header row */}
+        <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+          {/* Header */}
           <Box
             sx={{
               display: "flex",
@@ -76,7 +136,7 @@ export default function Overview() {
             <Typography
               component={Link}
               to="/transactions"
-              variant="caption"
+              variant="body2"
               sx={{
                 color: "primary.main",
                 textDecoration: "none",
@@ -87,66 +147,17 @@ export default function Overview() {
             </Typography>
           </Box>
 
-          {/* Transaction rows */}
-          {recent.map((tx, index) => {
-            const color = CATEGORY_COLORS[tx.category] || "#94a3b8";
-            const isLast = index === recent.length - 1;
-
-            return (
-              <Box
-                key={tx.id}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  py: 1.2,
-                  borderBottom: isLast ? "none" : "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                {/* Colored dot / type indicator */}
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 2,
-                    backgroundColor: color + "22",
-                    color: color,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 700,
-                    fontSize: "0.9rem",
-                    flexShrink: 0,
-                  }}
-                >
-                  {tx.type === "income" ? "↑" : "↓"}
-                </Box>
-
-                {/* Description + date */}
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" fontWeight={500}>
-                    {tx.description}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(tx.date)} · {tx.category}
-                  </Typography>
-                </Box>
-
-                {/* Amount */}
-                <Typography
-                  variant="body2"
-                  fontWeight={700}
-                  sx={{
-                    color: tx.type === "income" ? "success.main" : "error.main",
-                  }}
-                >
-                  {tx.type === "income" ? "+" : "-"}
-                  {formatCurrency(tx.amount)}
-                </Typography>
-              </Box>
-            );
-          })}
+          {/* List */}
+          {recent.length === 0 ? (
+            <Typography
+              color="text.secondary"
+              sx={{ textAlign: "center", py: 3 }}
+            >
+              No transactions yet
+            </Typography>
+          ) : (
+            recent.map((tx) => <RecentItem key={tx.id} tx={tx} />)
+          )}
         </CardContent>
       </Card>
     </Box>
