@@ -13,17 +13,19 @@ import { useApp } from "../../context/AppContext";
 import { groupByCategory, formatCurrency } from "../../utils/helpers";
 import { CATEGORY_COLORS } from "../../data/mockData";
 
-// ── Custom center label inside donut ──
+// ── Center label inside donut ──
 function DonutLabel({ viewBox, total }) {
+  // Safety check — if viewBox is undefined, return nothing
+  if (!viewBox) return null;
   const { cx, cy } = viewBox;
   return (
     <g>
       <text
         x={cx}
-        y={cy - 8}
+        y={cy - 10}
         textAnchor="middle"
         fill="#6b7280"
-        fontSize="12"
+        fontSize="13"
         fontWeight="500"
       >
         Total
@@ -33,7 +35,7 @@ function DonutLabel({ viewBox, total }) {
         y={cy + 14}
         textAnchor="middle"
         fill="#ffffff"
-        fontSize="16"
+        fontSize="15"
         fontWeight="800"
       >
         {formatCurrency(total)}
@@ -42,11 +44,11 @@ function DonutLabel({ viewBox, total }) {
   );
 }
 
-// ── Single category row ──
+// ── Single category item ──
 function CategoryItem({ name, value, color }) {
   return (
-    <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.3 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
         <Box
           sx={{
             width: 8,
@@ -56,19 +58,11 @@ function CategoryItem({ name, value, color }) {
             flexShrink: 0,
           }}
         />
-        <Typography variant="caption" sx={{ color: "#6b7280", flex: 1 }}>
+        <Typography variant="caption" sx={{ color: "text.secondary" }} noWrap>
           {name}
         </Typography>
       </Box>
-      <Typography
-        variant="body2"
-        sx={{
-          fontWeight: 700,
-          color: "white",
-          ml: 2.2,
-          fontSize: { xs: "0.82rem", sm: "0.9rem" },
-        }}
-      >
+      <Typography variant="body2" sx={{ fontWeight: 700, ml: 2.1 }}>
         {formatCurrency(value)}
       </Typography>
     </Box>
@@ -80,23 +74,53 @@ export default function SpendingChart() {
   const { transactions } = useApp();
   const [period, setPeriod] = useState("this");
 
-  // Get top 6 categories
+  // ── Safety check 1: transactions exist? ──
+  if (!transactions || transactions.length === 0) {
+    return (
+      <Card>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            Spending Summary
+          </Typography>
+          <Typography color="text.secondary">
+            No transaction data found.
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Compute chart data ──
   const allCategories = groupByCategory(transactions);
   const chartData = allCategories.slice(0, 6);
-
-  // Total spending
   const total = chartData.reduce((sum, c) => sum + c.value, 0);
 
+  // ── Safety check 2: expense data exists? ──
+  if (chartData.length === 0) {
+    return (
+      <Card>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            Spending Summary
+          </Typography>
+          <Typography color="text.secondary">
+            No expense categories found.
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card sx={{ height: "100%" }}>
-      <CardContent sx={{ p: 2.5 }}>
+    <Card>
+      <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
         {/* ── Header ── */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 2.5,
+            mb: 3,
             flexWrap: "wrap",
             gap: 1,
           }}
@@ -105,57 +129,48 @@ export default function SpendingChart() {
             Spending Summary
           </Typography>
 
-          {/* This month / Last month toggle */}
           <ButtonGroup size="small">
-            <Button
-              variant={period === "this" ? "contained" : "outlined"}
-              onClick={() => setPeriod("this")}
-              sx={{
-                fontSize: "0.75rem",
-                px: 1.5,
-                backgroundColor: period === "this" ? "#1f2028" : "transparent",
-                borderColor: "#2d2d3a",
-                color: period === "this" ? "white" : "#6b7280",
-                "&:hover": {
-                  backgroundColor: "#2d2d3a",
+            {["this", "last"].map((p) => (
+              <Button
+                key={p}
+                onClick={() => setPeriod(p)}
+                sx={{
+                  fontSize: "0.75rem",
+                  px: 1.5,
+                  backgroundColor: period === p ? "#1f2028" : "transparent",
                   borderColor: "#2d2d3a",
-                },
-              }}
-            >
-              • This month
-            </Button>
-            <Button
-              variant={period === "last" ? "contained" : "outlined"}
-              onClick={() => setPeriod("last")}
-              sx={{
-                fontSize: "0.75rem",
-                px: 1.5,
-                backgroundColor: period === "last" ? "#1f2028" : "transparent",
-                borderColor: "#2d2d3a",
-                color: period === "last" ? "white" : "#6b7280",
-                "&:hover": {
-                  backgroundColor: "#2d2d3a",
-                  borderColor: "#2d2d3a",
-                },
-              }}
-            >
-              Last month
-            </Button>
+                  color: period === p ? "white" : "text.secondary",
+                  "&:hover": {
+                    backgroundColor: "#2d2d3a",
+                    borderColor: "#2d2d3a",
+                  },
+                }}
+              >
+                {p === "this" ? "• This month" : "Last month"}
+              </Button>
+            ))}
           </ButtonGroup>
         </Box>
 
-        {/* ── Donut + Categories side by side ── */}
+        {/* ── Donut + Categories ── */}
         <Box
           sx={{
             display: "flex",
-            gap: 2,
+            gap: 3,
             alignItems: "center",
+            // Stack on mobile, side by side on tablet+
             flexDirection: { xs: "column", sm: "row" },
           }}
         >
-          {/* Donut chart */}
+          {/* ── Donut chart — FIXED pixel height, never % ── */}
           <Box
-            sx={{ width: { xs: "100%", sm: 200 }, height: 180, flexShrink: 0 }}
+            sx={{
+              flexShrink: 0,
+              // Fixed width on desktop, full width on mobile
+              width: { xs: "100%", sm: 220 },
+              // Always a fixed pixel height — this is the key
+              height: 220,
+            }}
           >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -164,55 +179,37 @@ export default function SpendingChart() {
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
-                  outerRadius={80}
+                  outerRadius={85}
                   dataKey="value"
-                  strokeWidth={0}
+                  strokeWidth={2}
+                  stroke="transparent"
                   labelLine={false}
+                  label={(props) => <DonutLabel {...props} total={total} />}
                 >
-                  {chartData.map((entry) => (
+                  {chartData.map((entry, index) => (
                     <Cell
-                      key={entry.name}
+                      key={`cell-${index}`}
                       fill={CATEGORY_COLORS[entry.name] || "#6b7280"}
                     />
                   ))}
                 </Pie>
-
-                {/* Center label — drawn manually */}
-                <text
-                  x="50%"
-                  y="46%"
-                  textAnchor="middle"
-                  fill="#6b7280"
-                  fontSize="12"
-                >
-                  Total
-                </text>
-                <text
-                  x="50%"
-                  y="58%"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="14"
-                  fontWeight="800"
-                >
-                  {formatCurrency(total)}
-                </text>
-
                 <Tooltip
-                  formatter={(val) => formatCurrency(val)}
+                  formatter={(val) => [formatCurrency(val), "Spending"]}
                   contentStyle={{
                     backgroundColor: "#1f2028",
                     border: "1px solid #2d2d3a",
                     borderRadius: "10px",
                     fontSize: "12px",
+                    color: "white",
                   }}
+                  itemStyle={{ color: "white" }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </Box>
 
-          {/* Category grid */}
-          <Grid container spacing={1.5} sx={{ flex: 1 }}>
+          {/* ── Category grid ── */}
+          <Grid container spacing={2} sx={{ flex: 1 }}>
             {chartData.map((cat) => (
               <Grid item xs={6} key={cat.name}>
                 <CategoryItem

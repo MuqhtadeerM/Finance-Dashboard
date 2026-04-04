@@ -17,6 +17,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Menu,
 } from "@mui/material";
 import {
   AddOutlined,
@@ -25,12 +26,185 @@ import {
   DeleteOutlined,
   ArrowUpwardOutlined,
   ArrowDownwardOutlined,
+  FileDownloadOutlined,
 } from "@mui/icons-material";
 import { useApp, ROLES } from "../context/AppContext";
 import { CATEGORIES, CATEGORY_COLORS } from "../data/mockData";
 import { formatCurrency, formatDate, getUniqueMonths } from "../utils/helpers";
 import TransactionModal from "../components/transactions/TransactionModal";
 import EmptyState from "../components/shared/EmptyState";
+
+// ============================================================
+// DOWNLOAD HELPERS
+// ============================================================
+
+function downloadCSV(transactions) {
+  const headers = ["Date", "Description", "Category", "Type", "Amount"];
+  const rows = transactions.map((t) => [
+    t.date,
+    `"${t.description}"`,
+    t.category,
+    t.type,
+    t.amount,
+  ]);
+  const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "transactions.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJSON(transactions) {
+  const json = JSON.stringify(transactions, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "transactions.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// SORT ICON — shows arrow on active sort column
+// ============================================================
+
+function SortIcon({ field, sortBy, sortOrder }) {
+  if (sortBy !== field) return null;
+  return sortOrder === "asc" ? (
+    <ArrowUpwardOutlined sx={{ fontSize: 13, ml: 0.5 }} />
+  ) : (
+    <ArrowDownwardOutlined sx={{ fontSize: 13, ml: 0.5 }} />
+  );
+}
+
+// ============================================================
+// DOWNLOAD MENU — CSV and JSON options
+// ============================================================
+
+function DownloadMenu({ transactions }) {
+  const [anchor, setAnchor] = useState(null);
+  const open = Boolean(anchor);
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<FileDownloadOutlined />}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{
+          borderColor: "#2d2d3a",
+          color: "#6b7280",
+          borderRadius: "10px",
+          "&:hover": {
+            borderColor: "#6b7280",
+            backgroundColor: "transparent",
+            color: "white",
+          },
+        }}
+      >
+        Download
+      </Button>
+
+      <Menu
+        anchorEl={anchor}
+        open={open}
+        onClose={() => setAnchor(null)}
+        PaperProps={{
+          sx: {
+            backgroundColor: "#13131a",
+            border: "1px solid #2d2d3a",
+            borderRadius: "12px",
+            mt: 0.5,
+            minWidth: 180,
+          },
+        }}
+      >
+        {/* Header label */}
+        <Box sx={{ px: 2, pt: 1, pb: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "#6b7280", fontWeight: 600, letterSpacing: "0.05em" }}
+          >
+            EXPORT AS
+          </Typography>
+        </Box>
+
+        {/* CSV option */}
+        <Box
+          onClick={() => {
+            downloadCSV(transactions);
+            setAnchor(null);
+          }}
+          sx={{
+            px: 2,
+            py: 1.25,
+            cursor: "pointer",
+            mx: 0.5,
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            "&:hover": { backgroundColor: "#1f2028" },
+          }}
+        >
+          <Typography sx={{ fontSize: "1.1rem" }}>📄</Typography>
+          <Box>
+            <Typography
+              variant="body2"
+              sx={{ color: "white", fontWeight: 600 }}
+            >
+              CSV File
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#6b7280" }}>
+              Open in Excel / Sheets
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* JSON option */}
+        <Box
+          onClick={() => {
+            downloadJSON(transactions);
+            setAnchor(null);
+          }}
+          sx={{
+            px: 2,
+            py: 1.25,
+            cursor: "pointer",
+            mx: 0.5,
+            mb: 0.5,
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            "&:hover": { backgroundColor: "#1f2028" },
+          }}
+        >
+          <Typography sx={{ fontSize: "1.1rem" }}>📦</Typography>
+          <Box>
+            <Typography
+              variant="body2"
+              sx={{ color: "white", fontWeight: 600 }}
+            >
+              JSON File
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#6b7280" }}>
+              For developers / APIs
+            </Typography>
+          </Box>
+        </Box>
+      </Menu>
+    </>
+  );
+}
+
+// ============================================================
+// MAIN PAGE COMPONENT
+// ============================================================
 
 export default function TransactionsPage() {
   const {
@@ -45,11 +219,11 @@ export default function TransactionsPage() {
     deleteTransaction,
   } = useApp();
 
-  const [modal, setModal] = useState(null); // null | "add" | { editing: tx }
+  const [modal, setModal] = useState(null);
   const isAdmin = role === ROLES.ADMIN;
   const months = getUniqueMonths(transactions);
 
-  // ── Sort toggle ──
+  // Toggle sort field or flip direction
   const toggleSort = (field) => {
     if (filters.sortBy === field) {
       updateFilter("sortOrder", filters.sortOrder === "asc" ? "desc" : "asc");
@@ -57,16 +231,6 @@ export default function TransactionsPage() {
       updateFilter("sortBy", field);
       updateFilter("sortOrder", "desc");
     }
-  };
-
-  // ── Sort icon ──
-  const SortIcon = ({ field }) => {
-    if (filters.sortBy !== field) return null;
-    return filters.sortOrder === "asc" ? (
-      <ArrowUpwardOutlined sx={{ fontSize: 13, ml: 0.5 }} />
-    ) : (
-      <ArrowDownwardOutlined sx={{ fontSize: 13, ml: 0.5 }} />
-    );
   };
 
   return (
@@ -93,24 +257,29 @@ export default function TransactionsPage() {
           </Typography>
         </Box>
 
-        {/* Add button — Admin only */}
-        {isAdmin && (
-          <Button
-            variant="contained"
-            startIcon={<AddOutlined />}
-            onClick={() => setModal("add")}
-            sx={{
-              backgroundColor: "#e91e8c",
-              "&:hover": { backgroundColor: "#c2185b" },
-              borderRadius: "10px",
-            }}
-          >
-            Add Transaction
-          </Button>
-        )}
+        {/* Action buttons */}
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <DownloadMenu transactions={filteredTransactions} />
+
+          {/* Add button — Admin only */}
+          {isAdmin && (
+            <Button
+              variant="contained"
+              startIcon={<AddOutlined />}
+              onClick={() => setModal("add")}
+              sx={{
+                backgroundColor: "#e91e8c",
+                "&:hover": { backgroundColor: "#c2185b" },
+                borderRadius: "10px",
+              }}
+            >
+              Add Transaction
+            </Button>
+          )}
+        </Box>
       </Box>
 
-      {/* ── Filters ── */}
+      {/* ── Filters bar ── */}
       <Card>
         <CardContent sx={{ p: 2 }}>
           <Box
@@ -141,7 +310,7 @@ export default function TransactionsPage() {
               sx={filterFieldStyle}
             />
 
-            {/* Type filter */}
+            {/* Type */}
             <TextField
               select
               size="small"
@@ -155,7 +324,7 @@ export default function TransactionsPage() {
               <MenuItem value="expense">Expense</MenuItem>
             </TextField>
 
-            {/* Category filter */}
+            {/* Category */}
             <TextField
               select
               size="small"
@@ -172,7 +341,7 @@ export default function TransactionsPage() {
               ))}
             </TextField>
 
-            {/* Month filter */}
+            {/* Month */}
             <TextField
               select
               size="small"
@@ -206,16 +375,16 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Table ── */}
+      {/* ── Transactions table ── */}
       <Card>
         {filteredTransactions.length === 0 ? (
           <EmptyState message="No transactions match your filters" />
         ) : (
-          <TableContainer>
-            <Table>
+          <TableContainer sx={{ overflowX: "auto" }}>
+            <Table sx={{ minWidth: 600 }}>
               <TableHead>
-                <TableRow sx={{ "& th": { borderColor: "#1f2028" } }}>
-                  {/* Sortable Date column */}
+                <TableRow>
+                  {/* Date — sortable */}
                   <TableCell
                     onClick={() => toggleSort("date")}
                     sx={{
@@ -226,7 +395,12 @@ export default function TransactionsPage() {
                     }}
                   >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      Date <SortIcon field="date" />
+                      Date
+                      <SortIcon
+                        field="date"
+                        sortBy={filters.sortBy}
+                        sortOrder={filters.sortOrder}
+                      />
                     </Box>
                   </TableCell>
 
@@ -234,7 +408,7 @@ export default function TransactionsPage() {
                   <TableCell sx={headerCell}>Category</TableCell>
                   <TableCell sx={headerCell}>Type</TableCell>
 
-                  {/* Sortable Amount column */}
+                  {/* Amount — sortable */}
                   <TableCell
                     align="right"
                     onClick={() => toggleSort("amount")}
@@ -252,12 +426,21 @@ export default function TransactionsPage() {
                         justifyContent: "flex-end",
                       }}
                     >
-                      Amount <SortIcon field="amount" />
+                      Amount
+                      <SortIcon
+                        field="amount"
+                        sortBy={filters.sortBy}
+                        sortOrder={filters.sortOrder}
+                      />
                     </Box>
                   </TableCell>
 
-                  {/* Actions column — Admin only */}
-                  {isAdmin && <TableCell sx={headerCell} />}
+                  {/* Actions — Admin only */}
+                  {isAdmin && (
+                    <TableCell sx={headerCell} align="right">
+                      Actions
+                    </TableCell>
+                  )}
                 </TableRow>
               </TableHead>
 
@@ -268,8 +451,7 @@ export default function TransactionsPage() {
                     <TableRow
                       key={tx.id}
                       sx={{
-                        "& td": { borderColor: "#1f2028" },
-                        "&:hover": { backgroundColor: "#1f202888" },
+                        "&:hover": { backgroundColor: "#1f202855" },
                         "&:last-child td": { border: 0 },
                         transition: "background 0.15s",
                       }}
@@ -288,7 +470,7 @@ export default function TransactionsPage() {
                       {/* Description */}
                       <TableCell
                         sx={{
-                          color: "white",
+                          color: "text.primary",
                           fontWeight: 500,
                           fontSize: "0.85rem",
                         }}
@@ -296,7 +478,7 @@ export default function TransactionsPage() {
                         {tx.description}
                       </TableCell>
 
-                      {/* Category badge */}
+                      {/* Category chip */}
                       <TableCell>
                         <Chip
                           label={tx.category}
@@ -311,7 +493,7 @@ export default function TransactionsPage() {
                         />
                       </TableCell>
 
-                      {/* Type badge */}
+                      {/* Type chip */}
                       <TableCell>
                         <Chip
                           label={
@@ -343,7 +525,7 @@ export default function TransactionsPage() {
                         {formatCurrency(tx.amount)}
                       </TableCell>
 
-                      {/* Edit / Delete — Admin only */}
+                      {/* Edit + Delete — Admin only */}
                       {isAdmin && (
                         <TableCell align="right">
                           <Box
@@ -368,6 +550,7 @@ export default function TransactionsPage() {
                                 <EditOutlined sx={{ fontSize: 15 }} />
                               </IconButton>
                             </Tooltip>
+
                             <Tooltip title="Delete">
                               <IconButton
                                 size="small"
@@ -400,12 +583,14 @@ export default function TransactionsPage() {
         )}
       </Card>
 
-      {/* ── Modals ── */}
+      {/* ── Add modal ── */}
       <TransactionModal
         open={modal === "add"}
         onClose={() => setModal(null)}
         onSave={addTransaction}
       />
+
+      {/* ── Edit modal ── */}
       <TransactionModal
         open={Boolean(modal?.editing)}
         onClose={() => setModal(null)}
@@ -416,7 +601,10 @@ export default function TransactionsPage() {
   );
 }
 
-// ── Shared styles ──
+// ============================================================
+// SHARED STYLES
+// ============================================================
+
 const headerCell = {
   color: "#6b7280",
   fontSize: "0.75rem",
@@ -424,6 +612,8 @@ const headerCell = {
   textTransform: "uppercase",
   letterSpacing: "0.05em",
   backgroundColor: "#0a0a0f",
+  borderColor: "#1f2028",
+  whiteSpace: "nowrap",
 };
 
 const filterFieldStyle = {
@@ -439,5 +629,4 @@ const filterFieldStyle = {
   "& .MuiInputLabel-root.Mui-focused": { color: "#e91e8c" },
   "& .MuiInputBase-input": { color: "white" },
   "& .MuiSelect-icon": { color: "#6b7280" },
-  "& .MuiMenuItem-root": { fontSize: "0.85rem" },
 };

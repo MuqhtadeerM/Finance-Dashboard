@@ -12,26 +12,31 @@ import Topbar from "./Topbar";
 
 export default function Layout({ children }) {
   const theme = useTheme();
-
-  // Mobile = screen smaller than "md" (900px)
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <Box
-      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#0a0a0f" }}
+      sx={{
+        display: "flex",
+        // Full viewport height — no overflow
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+        backgroundColor: "background.default",
+      }}
     >
-      {/* ── Desktop sidebar (always visible) ── */}
+      {/* ── Desktop sidebar ── */}
       {!isMobile && <Sidebar />}
 
-      {/* ── Mobile sidebar (slide-in drawer) ── */}
+      {/* ── Mobile drawer ── */}
       {isMobile && (
         <Drawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           PaperProps={{
             sx: {
-              backgroundColor: "#13131a",
+              backgroundColor: "background.paper",
               border: "none",
             },
           }}
@@ -40,29 +45,31 @@ export default function Layout({ children }) {
         </Drawer>
       )}
 
-      {/* ── Main content area ── */}
+      {/* ── Right side: topbar + content ── */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          minWidth: 0, // prevents overflow
+          minWidth: 0,
+          height: "100vh",
           overflow: "hidden",
         }}
       >
-        {/* Mobile: hamburger button inside topbar area */}
+        {/* Mobile hamburger row */}
         {isMobile && (
           <Box
             sx={{
               px: 2,
-              pt: 2,
-              backgroundColor: "#13131a",
-              borderBottom: "1px solid #1f2028",
+              py: 1,
+              backgroundColor: "background.paper",
+              borderBottom: `1px solid`,
+              borderColor: "divider",
             }}
           >
             <IconButton
               onClick={() => setDrawerOpen(true)}
-              sx={{ color: "white" }}
+              sx={{ color: "text.primary" }}
             >
               <MenuOutlined />
             </IconButton>
@@ -72,13 +79,16 @@ export default function Layout({ children }) {
         {/* Topbar */}
         <Topbar />
 
-        {/* Scrollable page content */}
+        {/* ── Scrollable page content ── */}
         <Box
           component="main"
           sx={{
             flex: 1,
             overflow: "auto",
-            p: { xs: 2, sm: 3 },
+            // Padding scales with screen size
+            p: { xs: 2, sm: 2.5, md: 3 },
+            // Make sure children can be full width
+            width: "100%",
           }}
         >
           {children}
