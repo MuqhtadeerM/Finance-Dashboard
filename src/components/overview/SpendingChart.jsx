@@ -6,96 +6,19 @@ import {
   Typography,
   Button,
   ButtonGroup,
-  Grid,
 } from "@mui/material";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useApp } from "../../context/AppContext";
 import { groupByCategory, formatCurrency } from "../../utils/helpers";
 import { CATEGORY_COLORS } from "../../data/mockData";
 
-// ── Center label inside donut ──
-function DonutLabel({ viewBox, total }) {
-  // Safety check — if viewBox is undefined, return nothing
-  if (!viewBox) return null;
-  const { cx, cy } = viewBox;
-  return (
-    <g>
-      <text
-        x={cx}
-        y={cy - 10}
-        textAnchor="middle"
-        fill="#6b7280"
-        fontSize="13"
-        fontWeight="500"
-      >
-        Total
-      </text>
-      <text
-        x={cx}
-        y={cy + 14}
-        textAnchor="middle"
-        fill="#ffffff"
-        fontSize="15"
-        fontWeight="800"
-      >
-        {formatCurrency(total)}
-      </text>
-    </g>
-  );
-}
-
-// ── Single category item ──
-function CategoryItem({ name, value, color }) {
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.3 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-        <Box
-          sx={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            backgroundColor: color,
-            flexShrink: 0,
-          }}
-        />
-        <Typography variant="caption" sx={{ color: "text.secondary" }} noWrap>
-          {name}
-        </Typography>
-      </Box>
-      <Typography variant="body2" sx={{ fontWeight: 700, ml: 2.1 }}>
-        {formatCurrency(value)}
-      </Typography>
-    </Box>
-  );
-}
-
-// ── Main component ──
 export default function SpendingChart() {
   const { transactions } = useApp();
   const [period, setPeriod] = useState("this");
 
-  // ── Safety check 1: transactions exist? ──
-  if (!transactions || transactions.length === 0) {
-    return (
-      <Card>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-            Spending Summary
-          </Typography>
-          <Typography color="text.secondary">
-            No transaction data found.
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ── Compute chart data ──
-  const allCategories = groupByCategory(transactions);
-  const chartData = allCategories.slice(0, 6);
+  const chartData = groupByCategory(transactions).slice(0, 6);
   const total = chartData.reduce((sum, c) => sum + c.value, 0);
 
-  // ── Safety check 2: expense data exists? ──
   if (chartData.length === 0) {
     return (
       <Card>
@@ -103,11 +26,52 @@ export default function SpendingChart() {
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
             Spending Summary
           </Typography>
-          <Typography color="text.secondary">
-            No expense categories found.
-          </Typography>
+          <Box sx={{ textAlign: "center", py: 6 }}>
+            <Typography color="text.secondary">
+              No expense data available
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
+    );
+  }
+
+  // ── Custom center label rendered as absolute overlay ──
+  // This is the most reliable approach — pure HTML over the SVG
+  function CenterLabel() {
+    return (
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: { xs: "50%", sm: "calc(100px)" }, // center of the 200px wide chart
+          transform: "translate(-50%, -50%)",
+          textAlign: "center",
+          pointerEvents: "none", // don't block chart interactions
+        }}
+      >
+        <Typography
+          sx={{
+            fontSize: "0.72rem",
+            color: "#6b7280",
+            fontWeight: 500,
+            lineHeight: 1.2,
+          }}
+        >
+          Total
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: "0.95rem",
+            fontWeight: 800,
+            color: "white",
+            lineHeight: 1.3,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {formatCurrency(total)}
+        </Typography>
+      </Box>
     );
   }
 
@@ -156,24 +120,23 @@ export default function SpendingChart() {
         <Box
           sx={{
             display: "flex",
-            gap: 3,
             alignItems: "center",
-            // Stack on mobile, side by side on tablet+
+            gap: 4,
             flexDirection: { xs: "column", sm: "row" },
           }}
         >
-          {/* ── Donut chart — FIXED pixel height, never % ── */}
+          {/* ── Donut with HTML center label overlay ── */}
           <Box
             sx={{
+              position: "relative", // needed for absolute child
+              width: { xs: "100%", sm: 200 },
+              height: 200,
               flexShrink: 0,
-              // Fixed width on desktop, full width on mobile
-              width: { xs: "100%", sm: 220 },
-              // Always a fixed pixel height — this is the key
-              height: 220,
             }}
           >
+            {/* The chart */}
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <Pie
                   data={chartData}
                   cx="50%"
@@ -181,14 +144,12 @@ export default function SpendingChart() {
                   innerRadius={55}
                   outerRadius={85}
                   dataKey="value"
-                  strokeWidth={2}
-                  stroke="transparent"
-                  labelLine={false}
-                  label={(props) => <DonutLabel {...props} total={total} />}
+                  strokeWidth={0}
+                  isAnimationActive={true}
                 >
-                  {chartData.map((entry, index) => (
+                  {chartData.map((entry, i) => (
                     <Cell
-                      key={`cell-${index}`}
+                      key={`cell-${i}`}
                       fill={CATEGORY_COLORS[entry.name] || "#6b7280"}
                     />
                   ))}
@@ -206,20 +167,102 @@ export default function SpendingChart() {
                 />
               </PieChart>
             </ResponsiveContainer>
+
+            {/* HTML overlay center label — sits in the donut hole */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                textAlign: "center",
+                pointerEvents: "none",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "0.7rem",
+                  color: "#6b7280",
+                  fontWeight: 500,
+                  lineHeight: 1.3,
+                  display: "block",
+                }}
+              >
+                Total
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: "0.88rem",
+                  fontWeight: 800,
+                  color: "white",
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {formatCurrency(total)}
+              </Typography>
+            </Box>
           </Box>
 
           {/* ── Category grid ── */}
-          <Grid container spacing={2} sx={{ flex: 1 }}>
-            {chartData.map((cat) => (
-              <Grid item xs={6} key={cat.name}>
-                <CategoryItem
-                  name={cat.name}
-                  value={cat.value}
-                  color={CATEGORY_COLORS[cat.name] || "#6b7280"}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          <Box
+            sx={{
+              flex: 1,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 2.5,
+              width: "100%",
+            }}
+          >
+            {chartData.map((cat) => {
+              const color = CATEGORY_COLORS[cat.name] || "#6b7280";
+              return (
+                <Box key={cat.name}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.75,
+                      mb: 0.3,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                        fontSize: "0.72rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {cat.name}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 700,
+                      color: "text.primary",
+                      ml: 2.1,
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    {formatCurrency(cat.value)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
         </Box>
       </CardContent>
     </Card>
