@@ -74,7 +74,7 @@ export default function Topbar() {
         >
           {greeting},{" "}
           <Box component="span" sx={{ fontWeight: 800 }}>
-            Maya
+            Muqhtadeer
           </Box>
         </Typography>
         <Typography
@@ -272,14 +272,14 @@ export default function Topbar() {
                 variant="body2"
                 sx={{ fontWeight: 600, lineHeight: 1.2, fontSize: "0.82rem" }}
               >
-                Maya Rivers
+                Muqhtadeer M
               </Typography>
               <Typography
                 variant="caption"
                 color="text.secondary"
                 sx={{ fontSize: "0.72rem" }}
               >
-                maya@creations.com
+                muqhtadeer@creations.com
               </Typography>
             </Box>
           )}
