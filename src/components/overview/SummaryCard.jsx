@@ -3,17 +3,19 @@ import { TrendingUp, TrendingDown } from "@mui/icons-material";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
 
 export default function SummaryCard({
-  title, // "Account Summary"
-  amount, // "₹2,15,120"
-  percent, // 15.8
-  percentLabel, // "Total Summary"
-  color, // "#00d4aa"
-  data, // [{value: 100}, {value: 120}, ...]
-  isPositive, // true = green arrow, false = red arrow
+  title,
+  amount,
+  percent,
+  percentLabel,
+  color,
+  data,
+  isPositive,
 }) {
   return (
     <Card
       sx={{
+        // Fill the grid cell completely
+        width: "100%",
         height: "100%",
         transition: "transform 0.2s, box-shadow 0.2s",
         "&:hover": {
@@ -22,71 +24,84 @@ export default function SummaryCard({
         },
       }}
     >
-      <CardContent sx={{ p: 2.5, pb: "2.5rem !important" }}>
-        {/* ── Top row: title + menu dot ── */}
+      <CardContent
+        sx={{
+          p: 3,
+          // Remove MUI's default bottom padding override
+          "&:last-child": { pb: 3 },
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        }}
+      >
+        {/* ── Top row: title + three dots ── */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 1.5,
+            alignItems: "center",
+            mb: 2,
           }}
         >
           <Typography
             variant="body2"
-            sx={{ color: "#6b7280", fontWeight: 500 }}
+            sx={{ color: "text.secondary", fontWeight: 500 }}
           >
             {title}
           </Typography>
-
-          {/* Three dot menu */}
           <Typography
             sx={{
-              color: "#6b7280",
+              color: "text.secondary",
               cursor: "pointer",
-              fontSize: "1.2rem",
+              fontSize: "1.1rem",
               lineHeight: 1,
+              letterSpacing: "0.1em",
             }}
           >
             ···
           </Typography>
         </Box>
 
-        {/* ── Amount + % badge ── */}
+        {/* ── Amount + percent badge ── */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
             gap: 1.5,
-            mb: 0.5,
+            mb: 0.75,
             flexWrap: "wrap",
           }}
         >
           <Typography
-            variant="h5"
             sx={{
               fontWeight: 800,
               letterSpacing: "-0.03em",
-              fontSize: { xs: "1.3rem", sm: "1.5rem", md: "1.6rem" },
+              fontSize: {
+                xs: "1.5rem",
+                sm: "1.65rem",
+                md: "1.8rem",
+                lg: "2rem",
+              },
+              color: "text.primary",
+              lineHeight: 1,
             }}
           >
             {amount}
           </Typography>
 
-          {/* Percent badge */}
           <Chip
             icon={
               isPositive ? (
                 <TrendingUp
                   sx={{
-                    fontSize: "14px !important",
+                    fontSize: "13px !important",
                     color: `${color} !important`,
                   }}
                 />
               ) : (
                 <TrendingDown
                   sx={{
-                    fontSize: "14px !important",
+                    fontSize: "13px !important",
                     color: "#ff4757 !important",
                   }}
                 />
@@ -100,16 +115,20 @@ export default function SummaryCard({
               fontWeight: 700,
               fontSize: "0.72rem",
               height: 24,
+              "& .MuiChip-icon": { ml: "6px" },
             }}
           />
 
-          <Typography variant="caption" sx={{ color: "#6b7280" }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", whiteSpace: "nowrap" }}
+          >
             {percentLabel}
           </Typography>
         </Box>
 
-        {/* ── Sparkline chart ── */}
-        <Box sx={{ height: 60, mt: 1.5, mx: -1 }}>
+        {/* ── Sparkline — flex grow to fill remaining space ── */}
+        <Box sx={{ flex: 1, minHeight: 70, mt: 1, mx: -1 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
@@ -120,7 +139,7 @@ export default function SummaryCard({
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={color} stopOpacity={0.35} />
                   <stop offset="95%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -128,7 +147,7 @@ export default function SummaryCard({
                 type="monotone"
                 dataKey="value"
                 stroke={color}
-                strokeWidth={2}
+                strokeWidth={2.5}
                 fill={`url(#grad-${color.replace("#", "")})`}
                 dot={false}
                 isAnimationActive={true}

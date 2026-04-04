@@ -1,9 +1,8 @@
-import { Grid } from "@mui/material";
+import { Box } from "@mui/material";
 import SummaryCard from "./SummaryCard";
 import { useApp } from "../../context/AppContext";
 import { formatCurrency, groupByMonth } from "../../utils/helpers";
 
-// Generate sparkline data from monthly totals
 function makeSparkline(monthlyData, key) {
   return monthlyData.map((m) => ({ value: m[key] }));
 }
@@ -12,7 +11,6 @@ export default function SummaryCards() {
   const { summary, transactions } = useApp();
   const byMonth = groupByMonth(transactions);
 
-  // Sparkline datasets
   const incomeSparkline = makeSparkline(byMonth, "income");
   const expenseSparkline = makeSparkline(byMonth, "expense");
   const balanceSparkline = makeSparkline(byMonth, "balance");
@@ -48,12 +46,22 @@ export default function SummaryCards() {
   ];
 
   return (
-    <Grid container spacing={2}>
+    <Box
+      sx={{
+        display: "grid",
+        // Equal 3 columns on desktop, 1 on mobile, 2 on tablet
+        gridTemplateColumns: {
+          xs: "1fr",
+          sm: "1fr 1fr",
+          md: "1fr 1fr 1fr",
+        },
+        gap: 2.5,
+        width: "100%",
+      }}
+    >
       {cards.map((card) => (
-        <Grid key={card.title} item xs={12} sm={6} md={4}>
-          <SummaryCard {...card} />
-        </Grid>
+        <SummaryCard key={card.title} {...card} />
       ))}
-    </Grid>
+    </Box>
   );
 }
