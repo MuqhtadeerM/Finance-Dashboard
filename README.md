@@ -2,7 +2,7 @@
 
 > A clean, responsive, dark-themed personal finance dashboard built with React and Material UI.
 
-🔗 **Live Demo:** https://finance-dashboard-YOUR-URL.vercel.app
+🔗 **Live Demo:** [https://finance-dashboard-YOUR-URL.vercel.app](https://finance-dashboard-eta-sage.vercel.app/)
 📁 **Repo:** https://github.com/YOUR-USERNAME/finance-dashboard
 
 ---
